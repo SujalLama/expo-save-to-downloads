@@ -1,0 +1,10 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "paths": {
+      "expo-save-to-downloads": ["../src/index"],
+      "expo-save-to-downloads/*": ["../src/*"]
+    }
+  }
+}
