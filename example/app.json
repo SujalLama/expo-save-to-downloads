@@ -14,7 +14,12 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "expo.modules.savetodownloads.example"
+      "bundleIdentifier": "expo.modules.savetodownloads.example",
+      "infoPlist": {
+        "UIFileSharingEnabled": true,
+        "LSSupportsOpeningDocumentsInPlace": true,
+        "NSPhotoLibraryUsageDescription": "We need access to save files and media to to downloads folder in your device."
+      }
     },
     "android": {
       "adaptiveIcon": {

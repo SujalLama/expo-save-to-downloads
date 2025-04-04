@@ -1,73 +1,52 @@
-import { useEvent } from 'expo';
-import ExpoSaveToDownloads, { ExpoSaveToDownloadsView } from 'expo-save-to-downloads';
-import { Button, SafeAreaView, ScrollView, Text, View } from 'react-native';
+import * as FileSystem from "expo-file-system";
+import * as MediaLibrary from "expo-media-library";
+import * as ExpoSaveToDownloads from "expo-save-to-downloads";
+import { Alert, Pressable, Text, View } from "react-native";
 
-export default function App() {
-  const onChangePayload = useEvent(ExpoSaveToDownloads, 'onChange');
+async function requestStoragePermission() {
+  const { status } = await MediaLibrary.requestPermissionsAsync();
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.container}>
-        <Text style={styles.header}>Module API Example</Text>
-        <Group name="Constants">
-          <Text>{ExpoSaveToDownloads.PI}</Text>
-        </Group>
-        <Group name="Functions">
-          <Text>{ExpoSaveToDownloads.hello()}</Text>
-        </Group>
-        <Group name="Async functions">
-          <Button
-            title="Set value"
-            onPress={async () => {
-              await ExpoSaveToDownloads.setValueAsync('Hello from JS!');
-            }}
-          />
-        </Group>
-        <Group name="Events">
-          <Text>{onChangePayload?.value}</Text>
-        </Group>
-        <Group name="Views">
-          <ExpoSaveToDownloadsView
-            url="https://www.example.com"
-            onLoad={({ nativeEvent: { url } }) => console.log(`Loaded: ${url}`)}
-            style={styles.view}
-          />
-        </Group>
-      </ScrollView>
-    </SafeAreaView>
-  );
+  if (status !== "granted") {
+    Alert.alert(
+      "Permission Denied",
+      "Storage access is required to save files."
+    );
+    return false;
+  }
+
+  return true;
 }
 
-function Group(props: { name: string; children: React.ReactNode }) {
+async function handleDownload() {
+  const hasPermission = await requestStoragePermission();
+  if (!hasPermission) return;
+
+  // const pdfUrl =
+  //   "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf";
+  const pdfUrl =
+    "https://www.aeee.in/wp-content/uploads/2020/08/Sample-pdf.pdf";
+  const fileUri = FileSystem.documentDirectory + "sample2.pdf";
+  try {
+    const { uri } = await FileSystem.downloadAsync(pdfUrl, fileUri);
+    const res = await ExpoSaveToDownloads.saveFileToDownloads(
+      uri,
+      "sample1.pdf"
+    );
+
+    Alert.alert(
+      res.success ? "File saved successfully!" : "Failed to save." + res.message
+    );
+  } catch (error) {
+    Alert.alert("Error", error.message);
+  }
+}
+
+export default function App() {
   return (
-    <View style={styles.group}>
-      <Text style={styles.groupHeader}>{props.name}</Text>
-      {props.children}
+    <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+      <Pressable onPress={handleDownload}>
+        <Text>Download File</Text>
+      </Pressable>
     </View>
   );
 }
-
-const styles = {
-  header: {
-    fontSize: 30,
-    margin: 20,
-  },
-  groupHeader: {
-    fontSize: 20,
-    marginBottom: 20,
-  },
-  group: {
-    margin: 20,
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 20,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: '#eee',
-  },
-  view: {
-    flex: 1,
-    height: 200,
-  },
-};
