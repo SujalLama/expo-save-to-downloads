@@ -1,1 +1,0 @@
-{"version":3,"file":"ExpoSaveToDownloadsModule.d.ts","sourceRoot":"","sources":["../src/ExpoSaveToDownloadsModule.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,YAAY,EAAuB,MAAM,MAAM,CAAC;AAEzD,OAAO,OAAO,yBAA0B,SAAQ,YAAY;IAC1D,mBAAmB,CACjB,OAAO,EAAE,MAAM,GACd,OAAO,CAAC;QAAE,OAAO,EAAE,OAAO,CAAC;QAAC,OAAO,EAAE,MAAM,CAAA;KAAE,CAAC;CAClD;;AAGD,wBAEE"}
