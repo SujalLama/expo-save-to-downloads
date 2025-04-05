@@ -1,6 +1,6 @@
 {
   "name": "expo-save-to-downloads",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "allow expo app to download in downloads folder",
   "main": "build/index.js",
   "types": "build/index.d.ts",
