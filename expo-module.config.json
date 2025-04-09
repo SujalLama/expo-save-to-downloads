@@ -1,0 +1,17 @@
+{
+  "platforms": [
+    "apple",
+    "android",
+    "web"
+  ],
+  "apple": {
+    "modules": [
+      "ExpoSaveToDownloadsModule"
+    ]
+  },
+  "android": {
+    "modules": [
+      "expo.modules.savetodownloads.ExpoSaveToDownloadsModule"
+    ]
+  }
+}
