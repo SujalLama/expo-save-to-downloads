@@ -1,48 +1,55 @@
 import ExpoModulesCore
 
 public class ExpoSaveToDownloadsModule: Module {
-  // Each module class must implement the definition function. The definition consists of components
-  // that describes the module's functionality and behavior.
-  // See https://docs.expo.dev/modules/module-api for more details about available components.
   public func definition() -> ModuleDefinition {
-    // Sets the name of the module that JavaScript code will use to refer to the module. Takes a string as an argument.
-    // Can be inferred from module's class name, but it's recommended to set it explicitly for clarity.
-    // The module will be accessible from `requireNativeModule('ExpoSaveToDownloads')` in JavaScript.
     Name("ExpoSaveToDownloads")
 
-    // Sets constant properties on the module. Can take a dictionary or a closure that returns a dictionary.
-    Constants([
-      "PI": Double.pi
-    ])
+    Function("saveFileToDownloads") { (fileUri: String, folderName: String?) -> [String: Any] in
+      return self.saveFile(fileUri: fileUri, folderName: folderName)
+    }
+  }
 
-    // Defines event names that the module can send to JavaScript.
-    Events("onChange")
-
-    // Defines a JavaScript synchronous function that runs the native code on the JavaScript thread.
-    Function("hello") {
-      return "Hello world! 👋"
+  private func saveFile(fileUri: String, folderName: String?) -> [String: Any] {
+    // Convert the file URI to URL and fetch the data from it
+    guard let url = URL(string: fileUri), let data = try? Data(contentsOf: url) else {
+      return ["success": false, "message": "Error: Failed to fetch data from the provided URL."]
     }
 
-    // Defines a JavaScript function that always returns a Promise and whose native code
-    // is by default dispatched on the different thread than the JavaScript runtime runs on.
-    AsyncFunction("setValueAsync") { (value: String) in
-      // Send an event to JavaScript.
-      self.sendEvent("onChange", [
-        "value": value
-      ])
+    let fileManager = FileManager.default
+
+    // Get the app's Documents directory
+    guard let documentsDirectory = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else {
+      return ["success": false, "message": "Error: Failed to get Documents directory."]
     }
 
-    // Enables the module to be used as a native view. Definition components that are accepted as part of the
-    // view definition: Prop, Events.
-    View(ExpoSaveToDownloadsView.self) {
-      // Defines a setter for the `url` prop.
-      Prop("url") { (view: ExpoSaveToDownloadsView, url: URL) in
-        if view.webView.url != url {
-          view.webView.load(URLRequest(url: url))
+    // Determine target directory (root or subfolder)
+    let targetDirectory: URL
+    if let folderName = folderName, !folderName.isEmpty {
+      targetDirectory = documentsDirectory.appendingPathComponent(folderName)
+
+      // Check if folder exists, create if not
+      if !fileManager.fileExists(atPath: targetDirectory.path) {
+        do {
+          try fileManager.createDirectory(at: targetDirectory, withIntermediateDirectories: true, attributes: nil)
+        } catch {
+          return ["success": false, "message": "Error: Failed to create folder '\(folderName)'. \(error.localizedDescription)"]
         }
       }
+    } else {
+      // No folder name provided, use root of Documents
+      targetDirectory = documentsDirectory
+    }
 
-      Events("onLoad")
+    // Prepare the destination URL
+    let fileName = url.lastPathComponent
+    let destinationURL = targetDirectory.appendingPathComponent(fileName)
+
+    // Save the file
+    do {
+      try data.write(to: destinationURL)
+      return ["success": true, "message": "Success: File saved to \(destinationURL.path)"]
+    } catch {
+      return ["success": false, "message": "Error: Failed to save the file. \(error.localizedDescription)"]
     }
   }
 }

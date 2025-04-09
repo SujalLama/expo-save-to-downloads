@@ -5,46 +5,53 @@ import expo.modules.kotlin.modules.ModuleDefinition
 import java.net.URL
 
 class ExpoSaveToDownloadsModule : Module() {
-  // Each module class must implement the definition function. The definition consists of components
-  // that describes the module's functionality and behavior.
-  // See https://docs.expo.dev/modules/module-api for more details about available components.
   override fun definition() = ModuleDefinition {
-    // Sets the name of the module that JavaScript code will use to refer to the module. Takes a string as an argument.
-    // Can be inferred from module's class name, but it's recommended to set it explicitly for clarity.
-    // The module will be accessible from `requireNativeModule('ExpoSaveToDownloads')` in JavaScript.
     Name("ExpoSaveToDownloads")
 
-    // Sets constant properties on the module. Can take a dictionary or a closure that returns a dictionary.
-    Constants(
-      "PI" to Math.PI
-    )
-
-    // Defines event names that the module can send to JavaScript.
-    Events("onChange")
-
-    // Defines a JavaScript synchronous function that runs the native code on the JavaScript thread.
-    Function("hello") {
-      "Hello world! 👋"
-    }
-
-    // Defines a JavaScript function that always returns a Promise and whose native code
-    // is by default dispatched on the different thread than the JavaScript runtime runs on.
-    AsyncFunction("setValueAsync") { value: String ->
-      // Send an event to JavaScript.
-      sendEvent("onChange", mapOf(
-        "value" to value
-      ))
-    }
-
-    // Enables the module to be used as a native view. Definition components that are accepted as part of
-    // the view definition: Prop, Events.
-    View(ExpoSaveToDownloadsView::class) {
-      // Defines a setter for the `url` prop.
-      Prop("url") { view: ExpoSaveToDownloadsView, url: URL ->
-        view.webView.loadUrl(url.toString())
-      }
-      // Defines an event that the view can send to JavaScript.
-      Events("onLoad")
+    Function("saveFileToDownloads") { fileUri: String, folderName: String? ->
+      val context = appContext.reactContext ?: throw IllegalStateException("React context is null")
+      return@Function saveFile(context, fileUri, folderName)
     }
   }
+
+  private fun saveFile(context: Context, fileUri: String, folderName: String?): Map<String, Any> {
+    return try {
+      // Get the file name from the file URI
+      val file = File(fileUri.replace("file://", ""))
+      val fileName = file.name
+
+      val inputStream: InputStream = file.inputStream()
+
+      // Prepare ContentValues for the new file
+      val values = ContentValues().apply {
+        put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+        put(MediaStore.MediaColumns.MIME_TYPE, "application/octet-stream")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+          // Save to Downloads/folderName if folder is provided
+          val relativePath = if (!folderName.isNullOrBlank()) {
+            "${Environment.DIRECTORY_DOWNLOADS}/$folderName"
+          } else {
+            Environment.DIRECTORY_DOWNLOADS
+          }
+          put(MediaStore.MediaColumns.RELATIVE_PATH, relativePath)
+        }
+      }
+
+      val contentUri: Uri = MediaStore.Downloads.EXTERNAL_CONTENT_URI
+      val uri = context.contentResolver.insert(contentUri, values)
+
+      if (uri != null) {
+        context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+          inputStream.copyTo(outputStream)
+        }
+        inputStream.close()
+        mapOf("success" to true, "message" to "Success: File saved successfully to Downloads${if (!folderName.isNullOrBlank()) "/$folderName" else ""} folder.")
+      } else {
+        mapOf("success" to false, "message" to "Error: Failed to insert file into MediaStore.")
+      }
+    } catch (e: Exception) {
+      mapOf("success" to false, "message" to "Error: ${e.localizedMessage}")
+    }
+  }
+
 }
