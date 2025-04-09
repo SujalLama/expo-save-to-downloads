@@ -10,46 +10,55 @@ public class ExpoSaveToDownloadsModule: Module {
   }
 
   private func saveFile(fileUri: String, folderName: String?) -> [String: Any] {
-    // Convert the file URI to URL and fetch the data from it
-    guard let url = URL(string: fileUri), let data = try? Data(contentsOf: url) else {
-      return ["success": false, "message": "Error: Failed to fetch data from the provided URL."]
+    // Clean and convert file URI
+    let cleanedPath = fileUri.replacingOccurrences(of: "file://", with: "")
+    let sourceURL = URL(fileURLWithPath: cleanedPath)
+
+    // Load data
+    guard let data = try? Data(contentsOf: sourceURL) else {
+      return ["success": false, "message": "Error: Failed to read file data from \(sourceURL.path)"]
     }
 
     let fileManager = FileManager.default
 
-    // Get the app's Documents directory
-    guard let documentsDirectory = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else {
-      return ["success": false, "message": "Error: Failed to get Documents directory."]
+    // Get base Documents directory
+    guard var targetDirectory = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else {
+      return ["success": false, "message": "Error: Failed to access Documents directory."]
     }
 
-    // Determine target directory (root or subfolder)
-    let targetDirectory: URL
-    if let folderName = folderName, !folderName.isEmpty {
-      targetDirectory = documentsDirectory.appendingPathComponent(folderName)
+    var shouldDeleteSourceFile = false
 
-      // Check if folder exists, create if not
+    // Append folder if provided
+    if let folderName = folderName, !folderName.isEmpty {
+      targetDirectory.appendPathComponent(folderName)
+      shouldDeleteSourceFile = true
+
+      // Create folder if needed
       if !fileManager.fileExists(atPath: targetDirectory.path) {
         do {
           try fileManager.createDirectory(at: targetDirectory, withIntermediateDirectories: true, attributes: nil)
         } catch {
-          return ["success": false, "message": "Error: Failed to create folder '\(folderName)'. \(error.localizedDescription)"]
+          return ["success": false, "message": "Error: Failed to create folder \(folderName). \(error.localizedDescription)"]
         }
       }
-    } else {
-      // No folder name provided, use root of Documents
-      targetDirectory = documentsDirectory
     }
 
-    // Prepare the destination URL
-    let fileName = url.lastPathComponent
-    let destinationURL = targetDirectory.appendingPathComponent(fileName)
+    let destinationURL = targetDirectory.appendingPathComponent(sourceURL.lastPathComponent)
 
-    // Save the file
+    // Save file and conditionally delete original
     do {
       try data.write(to: destinationURL)
-      return ["success": true, "message": "Success: File saved to \(destinationURL.path)"]
+
+      if shouldDeleteSourceFile {
+        try? fileManager.removeItem(at: sourceURL)
+      }
+
+      return [
+        "success": true,
+        "message": "Success: File saved to \(destinationURL.path)\(shouldDeleteSourceFile ? " and source deleted." : "")"
+      ]
     } catch {
-      return ["success": false, "message": "Error: Failed to save the file. \(error.localizedDescription)"]
+      return ["success": false, "message": "Error: \(error.localizedDescription)"]
     }
   }
 }

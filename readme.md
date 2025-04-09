@@ -42,3 +42,13 @@ const result = await saveFileToDownloads(
 console.log(result);
 // -> { success: true, message: "Success: File saved to ..." }
 ```
+
+### In these in the infoPlist in app.json
+
+```ts
+      "infoPlist": {
+        "UIFileSharingEnabled": true,
+        "LSSupportsOpeningDocumentsInPlace": true,
+        "NSPhotoLibraryUsageDescription": "We need access to save files and media to to downloads folder in your device."
+      }
+```
